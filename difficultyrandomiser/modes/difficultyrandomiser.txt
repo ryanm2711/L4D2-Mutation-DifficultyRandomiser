@@ -1,0 +1,17 @@
+"difficultyrandomiser"
+{
+	"base"		"coop"
+	"maxplayers"    "4"
+
+	"DisplayTitle"	"Difficulty Randomiser"
+	"ShortDescription"	"The difficulty changes man."
+	"Description"	"Difficulty changes randomly during gameplay."
+
+	"Image"		"maps/any"
+	"Author"	"ryanm2711"
+
+	convar
+	{
+		//Cvars go here
+	}
+}
