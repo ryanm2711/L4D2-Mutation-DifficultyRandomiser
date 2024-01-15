@@ -8,48 +8,52 @@ MutationState <-
     LastDifficulty = -1
 
     CurrentTimer = -1
-    HUDTimer = 0
+    //HUDTimer = 0
 
-    RandomTimeValues = {
-        Easy = {min = 5, max = 15},
-        Normal = {min = 15, max = 25},
-        Hard = {min = 30, max = 60},
-        Impossible = {min = 60, max = 120}
-    }
+    Difficulties = [
+        {"name": "Easy", "weight": 3, "min": 45, "max": 60},
+        {"name": "Normal", "weight": 10, "min": 15, "max": 45},
+        {"name": "Hard", "weight": 10, "min": 15, "max": 45},
+        {"name": "Impossible", "weight": 3, "min": 45, "max": 60},
+    ]
 
+    TotalWeight = 0
     HasFirstPlayerLeftStartArea = false
 }
 
 function ChangeDifficulty()
 {
-    local difficulty = GetDifficulty()
+    if (SessionState.TotalWeight == 0)
+    {
+        foreach(Difficulty in SessionState.Difficulties)
+        {
+            SessionState.TotalWeight += Difficulty.weight
+        }
+    }
 
-    SessionState.LastDifficulty = difficulty
+    local difficulty = GetDifficulty()
+    SessionState.LastDifficulty <- difficulty
 
     while (difficulty == SessionState.LastDifficulty)
     {
-        difficulty = RandomInt(0, 3)
-    }
-    SessionState.CurrentDifficulty = difficulty
+        local randomWeight = RandomInt(1, SessionState.TotalWeight)
+        local weightSum = 0
 
-    switch (SessionState.CurrentDifficulty)
-    {
-        case 0:
-            Convars.SetValue("z_difficulty", "Easy")
-            break
-        case 1:
-            Convars.SetValue("z_difficulty", "Normal")
-            break
-        case 2:
-            Convars.SetValue("z_difficulty", "Hard")
-            break
-        case 3:
-            Convars.SetValue("z_difficulty", "Impossible")
-            break
-        default:
-            Convars.SetValue("z_difficulty", "Normal")
-            break
+        for (local i = 0; i < SessionState.Difficulties.len(); i++)
+        {
+            weightSum += SessionState.Difficulties[i].weight
+            if (randomWeight <= weightSum)
+            {
+                difficulty = i
+                break
+            }
+        }
     }
+
+    SessionState.CurrentDifficulty <- difficulty
+
+    local difficultyName = SessionState.Difficulties[difficulty].name;
+    Convars.SetValue("z_difficulty", difficultyName);
 
     StartDifficultyChangeTimer()
 }
@@ -59,34 +63,22 @@ function StartDifficultyChangeTimer()
     local minTime = 0
     local maxTime = 0
 
-    switch (GetDifficulty())
-    {
-        case 0:
-            minTime = SessionState.RandomTimeValues.Easy.min
-            maxTime = SessionState.RandomTimeValues.Easy.max
-            break
-        case 1:
-            minTime = SessionState.RandomTimeValues.Normal.min
-            maxTime = SessionState.RandomTimeValues.Normal.max
-            break
-        case 2:
-            minTime = SessionState.RandomTimeValues.Hard.min
-            maxTime = SessionState.RandomTimeValues.Hard.max
-            break
-        case 3:
-            minTime = SessionState.RandomTimeValues.Impossible.min
-            maxTime = SessionState.RandomTimeValues.Impossible.max
-            break
-    }
+    local difficulty = SessionState.Difficulties[GetDifficulty()]
+    minTime = difficulty.min
+    maxTime = difficulty.max
 
     local randTime = RandomInt(minTime, maxTime)
     SessionState.CurrentTimer = Time() + randTime
-
-    //printl("New difficulty time: " + randTime)
 }
 
-function OnGameplayStart()
+function OnGameEvent_player_left_start_area(params)
 {
+    if (SessionState.HasFirstPlayerLeftStartArea)
+    {
+        // Prevent any event being ran again for that
+        return
+    }
+
     if (SessionState.CurrentDifficulty == -1)
     {
         SessionState.CurrentDifficulty = GetDifficulty()
@@ -97,6 +89,8 @@ function OnGameplayStart()
     {
         StartDifficultyChangeTimer()
     }
+
+    SessionState.HasFirstPlayerLeftStartArea = true
 }
 
 function Update()
@@ -116,4 +110,5 @@ function OnShutdown()
     SessionState.CurrentTimer = -1
     SessionState.CurrentDifficulty = -1
     SessionState.LastDifficulty = -1
+    SessionState.HasFirstPlayerLeftStartArea = false
 }
